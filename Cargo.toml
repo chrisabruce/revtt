@@ -5,3 +5,6 @@ authors = ["chris <chris@chrisbruce.com>"]
 edition = "2018"
 
 [dependencies]
+scraper = "0.9"
+reqwest = "0.9"
+dotenv = "0.13"
