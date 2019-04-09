@@ -6,6 +6,6 @@ use std::env;
 fn main() {
     dotenv().ok();
 
-    let r = Connection::new(&env::var("USER").unwrap(), &env::var("PASS").unwrap());
-    r.login();
+    let mut r = Connection::new(&env::var("USER").unwrap(), &env::var("PASS").unwrap());
+    let _ = r.login();
 }
