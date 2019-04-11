@@ -1,10 +1,12 @@
 use cookie::{Cookie, CookieJar};
-use reqwest::Client;
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::{Client, RedirectPolicy, Response};
 
 pub use reqwest::Error;
 
 const BASE_URL: &str = "https://revolutiontt.me";
 const HEADER_SET_COOKIE: &str = "Set-Cookie";
+const HEADER_COOKIE: &str = "Cookie";
 
 #[derive(Debug)]
 pub struct Connection {
@@ -17,7 +19,10 @@ pub struct Connection {
 impl Connection {
     pub fn new(username: &str, password: &str) -> Self {
         Connection {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                //.redirect(RedirectPolicy::none())
+                .build()
+                .unwrap(),
             jar: CookieJar::new(),
             username: username.to_string(),
             password: password.to_string(),
@@ -26,24 +31,30 @@ impl Connection {
 
     /// Returns `Error` if login fails, otherwise `Ok()`
     pub fn login(&mut self) -> Result<(), Error> {
+        // Need to hit page to get session cookie
+        let res = self.client.get(&format!("{}/login.php", BASE_URL)).send()?;
+        self.store_cookies(&res);
+
         let params = [
-            ("username", &self.username),
-            ("password", &self.password),
-            ("submit", &"login".to_string()),
+            ("username", self.username.clone()),
+            ("password", self.password.clone()),
+            ("submit", "login".to_string()),
         ];
+
+        println!("***\ncookies: {:#?}", self.cookie_headers());
 
         let mut res = self
             .client
-            .post(&format!("{}/login.php", BASE_URL))
+            .post(&format!("{}/takelogin.php", BASE_URL))
             .form(&params)
+            .headers(self.cookie_headers())
             .send()?;
-        self.store_cookies(&res);
-
-        println!("{:?}", res.text());
+        println!("{:#?}", res.headers());
+        println!("{:#?}", res.text());
         Ok(())
     }
 
-    fn store_cookies(&mut self, res: &reqwest::Response) {
+    fn store_cookies(&mut self, res: &Response) {
         res.headers()
             .get_all(HEADER_SET_COOKIE)
             .into_iter()
@@ -55,6 +66,17 @@ impl Connection {
                     self.jar.add_original(cookie);
                 }
             });
+    }
+
+    fn cookie_headers(&self) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        for cookie in self.jar.iter() {
+            headers.append(
+                HEADER_COOKIE,
+                HeaderValue::from_str(&format!("{}={}", cookie.name(), cookie.value())).unwrap(),
+            );
+        }
+        headers
     }
 }
 
