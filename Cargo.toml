@@ -6,6 +6,5 @@ edition = "2018"
 
 [dependencies]
 scraper = "0.9"
-reqwest = "0.9"
+reqwest = { git = "https://github.com/seanmonstar/reqwest" } 
 dotenv = "0.13"
-cookie = "0.11"
